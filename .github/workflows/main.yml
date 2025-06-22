@@ -54,6 +54,11 @@ jobs:
         run: terraform plan -no-color -out=tfplan
 
       - name: Terraform Apply
-        id: apply
-        # O -auto-approve é crucial para automação, pois não haverá um terminal para digitar 'yes'
-        run: terraform apply -auto-approve tfplan 
+        if: steps.plan.outputs.exitcode == 2 || steps.plan.outputs.exitcode == 0
+        run: terraform apply -auto-approve -input=false plan.out
+
+      - name: Upload Terraform State
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-state
+          path: terraform.tfstate 
