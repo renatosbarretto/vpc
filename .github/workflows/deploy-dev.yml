@@ -1,0 +1,54 @@
+name: 'Deploy VPC Dev Spoke via Terraform'
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'vpc/dev/**' # Roda apenas se houver mudanças na pasta vpc/dev
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: 'Deploy VPC Dev'
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./vpc/dev
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::684120556098:role/GitHub-Actions-Hub-Deploy-Role
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.0.0
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -out=tfplan
+
+      - name: Terraform Apply
+        if: steps.plan.outputs.exitcode == 2 || steps.plan.outputs.exitcode == 0
+        run: terraform apply -auto-approve -input=false tfplan 

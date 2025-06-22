@@ -132,6 +132,12 @@ resource "aws_route_table" "hub_public" {
     gateway_id = aws_internet_gateway.hub.id
   }
 
+  # Rota para a VPC de desenvolvimento
+  route {
+    cidr_block                = "10.1.0.0/16" # CIDR da VPC Dev
+    transit_gateway_id        = aws_ec2_transit_gateway.hub.id
+  }
+
   tags = {
     Name = "hub-public-rt"
   }
@@ -145,6 +151,12 @@ resource "aws_route_table" "hub_private" {
   route {
     cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.hub[count.index].id
+  }
+
+  # Rota para a VPC de desenvolvimento
+  route {
+    cidr_block                = "10.1.0.0/16" # CIDR da VPC Dev
+    transit_gateway_id        = aws_ec2_transit_gateway.hub.id
   }
 
   tags = {
