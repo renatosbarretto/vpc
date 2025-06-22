@@ -1,0 +1,59 @@
+name: 'Deploy VPC Hub via Terraform'
+
+# Trigger: Roda o workflow a cada push na branch 'main'
+on:
+  push:
+    branches:
+      - main
+  # Permite que você rode este workflow manualmente pela aba Actions do GitHub
+  workflow_dispatch:
+
+# Define as permissões necessárias para o workflow se autenticar na AWS via OIDC
+permissions:
+  id-token: write # Necessário para obter o token OIDC
+  contents: read  # Necessário para fazer o checkout do código
+
+jobs:
+  deploy:
+    name: 'Deploy VPC Hub'
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        shell: bash
+        # Define o diretório de trabalho para todos os passos de 'run'
+        working-directory: ./vpc/hub
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Configura as credenciais da AWS usando a Role OIDC
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          # Usa a Role que criamos na AWS. O token OIDC do GitHub é trocado por credenciais temporárias.
+          role-to-assume: arn:aws:iam::684120556098:role/GitHub-Actions-Hub-Deploy-Role
+          aws-region: us-east-1 # Região onde os recursos serão criados
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.0.0 # Você pode fixar a versão para garantir consistência
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -out=tfplan
+
+      - name: Terraform Apply
+        id: apply
+        # O -auto-approve é crucial para automação, pois não haverá um terminal para digitar 'yes'
+        run: terraform apply -auto-approve tfplan 
