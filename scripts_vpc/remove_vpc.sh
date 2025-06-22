@@ -329,6 +329,30 @@ main() {
             log "   ✅ Subnet $subnet removida"
         done
     fi
+
+    # Remover Route Tables customizadas
+    ROUTE_TABLES=$(aws ec2 describe-route-tables \
+        --filters "Name=vpc-id,Values=$VPC_ID" "Name=association.main,Values=false" \
+        --query "RouteTables[].RouteTableId" \
+        --output text)
+    
+    if [ -n "$ROUTE_TABLES" ]; then
+        log "🗑️  Removendo Route Tables customizadas..."
+        for rt_id in $ROUTE_TABLES; do
+            # Disassociate route tables
+            ASSOCS=$(aws ec2 describe-route-tables --route-table-ids "$rt_id" \
+                --query "RouteTables[0].Associations[].RouteTableAssociationId" \
+                --output text)
+            if [ -n "$ASSOCS" ]; then
+                for assoc_id in $ASSOCS; do
+                    aws ec2 disassociate-route-table --association-id "$assoc_id" >/dev/null 2>&1 || true
+                done
+            fi
+            # Delete route table
+            aws ec2 delete-route-table --route-table-id "$rt_id" >/dev/null 2>&1 || true
+            log "   ✅ Route Table $rt_id removida"
+        done
+    fi
     
     # =============================================================================
     # REMOVER VPC
