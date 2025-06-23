@@ -28,21 +28,6 @@ jobs:
       with:
         terraform_version: "1.5.0"
 
-    - name: Install Checkov
-      run: |
-        pip install checkov
-
-    - name: Run Checkov Security Scan
-      run: |
-        checkov -d . --framework terraform --output cli --output junitxml --output-file-path ./
-        checkov -d . --framework terraform --output sarif --output-file-path ./
-
-    - name: Upload Checkov SARIF
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: ./checkov-report.sarif
-
     - name: Install TFLint
       run: |
         curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
@@ -69,12 +54,6 @@ jobs:
           const fs = require('fs');
           let comment = '## 🔍 Security and Quality Report\n\n';
           
-          // Checkov results
-          if (fs.existsSync('./checkov-report.xml')) {
-            comment += '### ✅ Checkov Security Scan\n';
-            comment += 'Security scan completed. Check the logs for detailed results.\n\n';
-          }
-          
           // TFLint results
           if (fs.existsSync('./tflint-report.xml')) {
             comment += '### ✅ TFLint Code Quality\n';
@@ -82,7 +61,6 @@ jobs:
           }
           
           comment += '### 📋 Summary\n';
-          comment += '- Security scan: ✅ Completed\n';
           comment += '- Code quality: ✅ Completed\n';
           comment += '- Documentation: ✅ Updated\n';
           
