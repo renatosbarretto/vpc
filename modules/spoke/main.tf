@@ -116,14 +116,25 @@ resource "aws_route_table_association" "private" {
 # =============================================================================
 
 resource "aws_security_group" "vpc_endpoints" {
-  name   = "${var.spoke_name}-vpc-endpoints-sg"
-  vpc_id = aws_vpc.spoke.id
+  name        = "${var.spoke_name}-vpc-endpoints-sg"
+  description = "Security group for VPC endpoints (SSM, SSMMessages, EC2Messages) - allows HTTPS from VPC"
+  vpc_id      = aws_vpc.spoke.id
 
   ingress {
+    description = "Allow HTTPS from VPC for VPC endpoints"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = [var.vpc_cidr]
+  }
+
+  # Allow HTTPS egress for VPC endpoints to communicate with AWS services
+  egress {
+    description = "Allow HTTPS egress for VPC endpoints to AWS services"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = merge(var.common_tags, {

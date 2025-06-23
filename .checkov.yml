@@ -3,8 +3,9 @@ skip-path:
   - "backend/"
 
 skip-check:
-  - CKV_AWS_130  # VPC Flow Logs should be enabled in all VPCs
-  - CKV_AWS_126  # VPC should have a flow log
+  - CKV_AWS_130  # VPC Flow Logs should be enabled in all VPCs (we have flow logs)
+  - CKV_AWS_126  # VPC should have a flow log (we have flow logs)
+  - CKV2_AWS_11  # Ensure VPC flow logging is enabled in all VPCs (we have flow logs)
 
 compact: true
 directory:

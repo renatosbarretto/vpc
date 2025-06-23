@@ -63,22 +63,59 @@ resource "aws_iam_instance_profile" "ssm_instance_profile" {
 
 resource "aws_security_group" "instance_sg" {
   name        = "${var.instance_name}-sg"
-  description = "Security group for ${var.instance_name}"
+  description = "Security group for ${var.instance_name} - allows ICMP from hub/spokes and restricted outbound"
   vpc_id      = var.vpc_id
 
   # Allow ICMP (ping) from hub and all spokes
   ingress {
+    description = "Allow ICMP (ping) from hub and spoke networks"
     from_port   = -1
     to_port     = -1
     protocol    = "icmp"
     cidr_blocks = var.allowed_icmp_cidrs
   }
 
-  # Allow all outbound traffic
+  # Allow HTTPS outbound for SSM and updates
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "Allow HTTPS outbound for SSM and system updates"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Allow HTTP outbound for updates (if needed)
+  egress {
+    description = "Allow HTTP outbound for system updates"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Allow DNS outbound
+  egress {
+    description = "Allow DNS outbound"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow DNS outbound (UDP)"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Allow NTP outbound
+  egress {
+    description = "Allow NTP outbound"
+    from_port   = 123
+    to_port     = 123
+    protocol    = "udp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -96,6 +133,27 @@ resource "aws_instance" "this" {
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = "t2.micro"
   subnet_id     = var.subnet_id
+  
+  # Security and optimization settings
+  ebs_optimized = true
+  
+  # Metadata service v2 (IMDSv2) - more secure
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"  # IMDSv2
+    http_put_response_hop_limit = 1
+  }
+  
+  # Root block device with encryption
+  root_block_device {
+    encrypted   = true
+    volume_size = 8
+    volume_type = "gp2"
+    
+    tags = merge(var.common_tags, {
+      Name = "${var.instance_name}-root-volume"
+    })
+  }
   
   iam_instance_profile = aws_iam_instance_profile.ssm_instance_profile.name
   vpc_security_group_ids = [aws_security_group.instance_sg.id]
