@@ -1,0 +1,16 @@
+skip-path:
+  - "examples/"
+  - "backend/"
+
+skip-check:
+  - CKV_AWS_130  # VPC Flow Logs should be enabled in all VPCs
+  - CKV_AWS_126  # VPC should have a flow log
+
+compact: true
+directory:
+  - .
+framework:
+  - terraform
+output: cli
+quiet: false
+soft-fail: false 

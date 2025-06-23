@@ -74,14 +74,18 @@ resource "aws_route" "hub_public_to_spokes" {
 # Rota das route tables privadas do Hub para os spokes via TGW
 resource "aws_route" "hub_private_to_spokes" {
   for_each = {
-    for pair in setproduct(module.hub.private_route_table_ids, local.spokes) :
-    "${pair[0]}-${pair[1].name}" => {
-      route_table_id = pair[0]
-      spoke_cidr     = pair[1].vpc_cidr
-    }
+    for pair in flatten([
+      for i, rt_id in module.hub.private_route_table_ids : [
+        for j, spoke in values(local.spokes) : {
+          rt_id      = rt_id
+          spoke_cidr = spoke.vpc_cidr
+          key        = "${i}-${j}"
+        }
+      ]
+    ]) : pair.key => pair
   }
 
-  route_table_id         = each.value.route_table_id
+  route_table_id         = each.value.rt_id
   destination_cidr_block = each.value.spoke_cidr
   transit_gateway_id     = module.hub.transit_gateway_id
 

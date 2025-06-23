@@ -1,0 +1,68 @@
+name: "Deploy to Environments"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+env:
+  TF_VERSION: "1.5.0"
+
+jobs:
+  deploy:
+    name: "Deploy to ${{ github.event.inputs.environment }}"
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    defaults:
+      run:
+        working-directory: ./environments/${{ github.event.inputs.environment }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Validate
+      run: terraform validate
+
+    - name: Terraform Plan
+      if: github.event.inputs.action == 'plan'
+      run: terraform plan -no-color
+
+    - name: Terraform Apply
+      if: github.event.inputs.action == 'apply'
+      run: terraform apply -auto-approve
+
+    - name: Terraform Destroy
+      if: github.event.inputs.action == 'destroy'
+      run: terraform destroy -auto-approve 
