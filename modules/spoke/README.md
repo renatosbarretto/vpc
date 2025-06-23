@@ -1,76 +1,83 @@
-# Spoke Module
+# Spoke VPC Module
 
-Este módulo cria uma VPC Spoke conectada ao Hub via Transit Gateway na arquitetura Hub and Spoke da AWS.
+This module creates a Spoke VPC designed to connect to a central Hub via a Transit Gateway. It includes private subnets and necessary endpoints for SSM connectivity.
 
-## Funcionalidades
-
-- **VPC Spoke** com subnets privadas
-- **Transit Gateway Attachment** para conectividade com o Hub
-- **Subnets dinâmicas** geradas automaticamente usando `cidrsubnet()`
-- **DNS Support** habilitado no Transit Gateway Attachment
-- **Tags consistentes** em todos os recursos
-- **Dependências corretas** para evitar problemas de ordem de criação
-
-## Inputs
-
-| Nome | Descrição | Tipo | Default | Obrigatório |
-|------|-----------|------|---------|-------------|
-| vpc_cidr | CIDR block da VPC Spoke | `string` | n/a | sim |
-| environment | Ambiente (dev, staging, prod, test) | `string` | n/a | sim |
-| spoke_name | Nome do spoke (dev, staging, prod, app1, etc.) | `string` | n/a | sim |
-| project | Nome do projeto | `string` | `"vpc-hub-spoke"` | não |
-| number_of_azs | Número de Availability Zones | `number` | `2` | não |
-| transit_gateway_id | ID do Transit Gateway do Hub | `string` | n/a | sim |
-| transit_gateway_attachment_dependencies | Dependências para o attachment | `any` | `[]` | não |
-| common_tags | Tags comuns para todos os recursos | `map(string)` | `{ManagedBy = "terraform"}` | não |
-| additional_tags | Tags adicionais | `map(string)` | `{}` | não |
-
-## Outputs
-
-| Nome | Descrição |
-|------|-----------|
-| vpc_id | ID da VPC Spoke |
-| vpc_cidr | CIDR block da VPC Spoke |
-| private_subnet_ids | IDs das subnets privadas |
-| private_subnet_cidrs | CIDR blocks das subnets privadas |
-| transit_gateway_attachment_id | ID do Transit Gateway Attachment |
-| private_route_table_id | ID da Route Table privada |
-| availability_zones | Lista de Availability Zones utilizadas |
-
-## Exemplo de Uso
+## Example Usage
 
 ```hcl
-module "dev_spoke" {
+module "spoke_dev" {
   source = "./modules/spoke"
 
-  vpc_cidr      = "10.1.0.0/16"
-  environment   = "dev"
-  spoke_name    = "dev"
-  project       = "my-project"
-  number_of_azs = 2
-  
+  spoke_name         = "dev"
+  vpc_cidr           = "10.1.0.0/16"
+  number_of_azs      = 2
   transit_gateway_id = module.hub.transit_gateway_id
-  transit_gateway_attachment_dependencies = [module.hub.transit_gateway_attachment_id]
-  
+  aws_region         = "us-east-1"
+
   common_tags = {
     Environment = "dev"
     Project     = "my-project"
     ManagedBy   = "terraform"
   }
+
+  transit_gateway_attachment_dependencies = [
+    module.hub.transit_gateway_attachment_id
+  ]
 }
 ```
 
-## Recursos Criados
+<!-- BEGIN_TF_DOCS -->
+## Requirements
 
-- 1 VPC Spoke
-- 2-4 subnets privadas (conforme `number_of_azs`)
-- 1 Transit Gateway VPC Attachment
-- 1 Route Table privada
-- Associações de Route Tables
+No requirements.
 
-## Notas Importantes
+## Providers
 
-- **Subnets apenas privadas**: Spokes não possuem subnets públicas por padrão
-- **Conectividade via Hub**: Todo tráfego externo passa pelo Hub via Transit Gateway
-- **DNS Support**: Habilitado para resolução de domínios internos da AWS
-- **Dependências**: O módulo aguarda a criação do attachment do Hub antes de criar o próprio attachment 
+| Name | Version |
+|------|---------|
+| <a name="provider_aws"></a> [aws](#provider\_aws) | n/a |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [aws_ec2_transit_gateway_vpc_attachment.spoke](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_transit_gateway_vpc_attachment) | resource |
+| [aws_route_table.private](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table) | resource |
+| [aws_route_table_association.private](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table_association) | resource |
+| [aws_security_group.vpc_endpoints](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
+| [aws_subnet.private](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/subnet) | resource |
+| [aws_vpc.spoke](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc) | resource |
+| [aws_vpc_endpoint.ec2messages](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_endpoint) | resource |
+| [aws_vpc_endpoint.ssm](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_endpoint) | resource |
+| [aws_vpc_endpoint.ssmmessages](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_endpoint) | resource |
+| [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_additional_tags"></a> [additional\_tags](#input\_additional\_tags) | Additional tags to apply to all resources | `map(string)` | `{}` | no |
+| <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS region for VPC endpoints | `string` | n/a | yes |
+| <a name="input_common_tags"></a> [common\_tags](#input\_common\_tags) | Common tags to apply to all resources | `map(string)` | `{}` | no |
+| <a name="input_number_of_azs"></a> [number\_of\_azs](#input\_number\_of\_azs) | Number of Availability Zones to use | `number` | `2` | no |
+| <a name="input_spoke_name"></a> [spoke\_name](#input\_spoke\_name) | Name of the spoke (e.g., dev, qa, prod) | `string` | n/a | yes |
+| <a name="input_transit_gateway_attachment_dependencies"></a> [transit\_gateway\_attachment\_dependencies](#input\_transit\_gateway\_attachment\_dependencies) | Dependencies for the TGW attachment, typically the Hub attachment ID | `any` | `[]` | no |
+| <a name="input_transit_gateway_id"></a> [transit\_gateway\_id](#input\_transit\_gateway\_id) | ID of the Transit Gateway to attach to | `string` | n/a | yes |
+| <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | CIDR block for the Spoke VPC | `string` | n/a | yes |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| <a name="output_availability_zones"></a> [availability\_zones](#output\_availability\_zones) | List of Availability Zones used |
+| <a name="output_private_route_table_id"></a> [private\_route\_table\_id](#output\_private\_route\_table\_id) | ID of the private route table |
+| <a name="output_private_subnet_cidrs"></a> [private\_subnet\_cidrs](#output\_private\_subnet\_cidrs) | CIDR blocks of the private subnets |
+| <a name="output_private_subnet_ids"></a> [private\_subnet\_ids](#output\_private\_subnet\_ids) | IDs of the private subnets in the Spoke VPC |
+| <a name="output_transit_gateway_attachment_id"></a> [transit\_gateway\_attachment\_id](#output\_transit\_gateway\_attachment\_id) | ID of the Transit Gateway VPC attachment for the Spoke |
+| <a name="output_vpc_cidr"></a> [vpc\_cidr](#output\_vpc\_cidr) | CIDR block of the Spoke VPC |
+| <a name="output_vpc_id"></a> [vpc\_id](#output\_vpc\_id) | ID of the Spoke VPC |
+<!-- END_TF_DOCS -->

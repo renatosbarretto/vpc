@@ -1,42 +1,8 @@
-# Hub Module
+# Hub VPC Module
 
-Este módulo cria uma VPC Hub central com Transit Gateway para arquitetura Hub and Spoke na AWS.
+This module creates a central Hub VPC with a Transit Gateway for a Hub and Spoke architecture in AWS.
 
-## Funcionalidades
-
-- **VPC Hub** com subnets públicas e privadas
-- **Internet Gateway** para conectividade externa
-- **NAT Gateways** para saída de internet das subnets privadas
-- **Transit Gateway** para conectividade entre VPCs
-- **Subnets dinâmicas** geradas automaticamente usando `cidrsubnet()`
-- **DNS Support** habilitado no Transit Gateway
-- **Tags consistentes** em todos os recursos
-
-## Inputs
-
-| Nome | Descrição | Tipo | Default | Obrigatório |
-|------|-----------|------|---------|-------------|
-| vpc_cidr | CIDR block da VPC Hub | `string` | `"10.0.0.0/16"` | não |
-| environment | Ambiente (dev, staging, prod, test) | `string` | n/a | sim |
-| project | Nome do projeto | `string` | `"vpc-hub-spoke"` | não |
-| number_of_azs | Número de Availability Zones | `number` | `2` | não |
-| common_tags | Tags comuns para todos os recursos | `map(string)` | `{ManagedBy = "terraform"}` | não |
-| additional_tags | Tags adicionais | `map(string)` | `{}` | não |
-
-## Outputs
-
-| Nome | Descrição |
-|------|-----------|
-| vpc_id | ID da VPC Hub |
-| vpc_cidr | CIDR block da VPC Hub |
-| public_subnet_ids | IDs das subnets públicas |
-| private_subnet_ids | IDs das subnets privadas |
-| transit_gateway_id | ID do Transit Gateway |
-| transit_gateway_attachment_id | ID do attachment do TGW para o Hub |
-| internet_gateway_id | ID do Internet Gateway |
-| nat_gateway_ids | IDs dos NAT Gateways |
-
-## Exemplo de Uso
+## Example Usage
 
 ```hcl
 module "hub" {
@@ -55,16 +21,69 @@ module "hub" {
 }
 ```
 
-## Recursos Criados
+<!-- BEGIN_TF_DOCS -->
+## Requirements
 
-- 1 VPC
-- 2-4 subnets públicas (conforme `number_of_azs`)
-- 2-4 subnets privadas (conforme `number_of_azs`)
-- 1 Internet Gateway
-- 2-4 NAT Gateways (conforme `number_of_azs`)
-- 2-4 Elastic IPs (conforme `number_of_azs`)
-- 1 Transit Gateway
-- 1 Transit Gateway VPC Attachment
-- 1 Route Table pública
-- 2-4 Route Tables privadas (conforme `number_of_azs`)
-- Associações de Route Tables 
+No requirements.
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_aws"></a> [aws](#provider\_aws) | n/a |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [aws_ec2_transit_gateway.hub](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_transit_gateway) | resource |
+| [aws_ec2_transit_gateway_vpc_attachment.hub](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_transit_gateway_vpc_attachment) | resource |
+| [aws_eip.nat](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eip) | resource |
+| [aws_internet_gateway.hub](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/internet_gateway) | resource |
+| [aws_nat_gateway.hub](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/nat_gateway) | resource |
+| [aws_route_table.private](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table) | resource |
+| [aws_route_table.public](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table) | resource |
+| [aws_route_table_association.private](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table_association) | resource |
+| [aws_route_table_association.public](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table_association) | resource |
+| [aws_subnet.private](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/subnet) | resource |
+| [aws_subnet.public](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/subnet) | resource |
+| [aws_vpc.hub](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc) | resource |
+| [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_additional_tags"></a> [additional\_tags](#input\_additional\_tags) | Additional tags to apply to all resources | `map(string)` | `{}` | no |
+| <a name="input_common_tags"></a> [common\_tags](#input\_common\_tags) | Common tags to apply to all resources | `map(string)` | <pre>{<br/>  "ManagedBy": "terraform"<br/>}</pre> | no |
+| <a name="input_environment"></a> [environment](#input\_environment) | Environment name (e.g., dev, staging, prod) | `string` | n/a | yes |
+| <a name="input_number_of_azs"></a> [number\_of\_azs](#input\_number\_of\_azs) | Number of Availability Zones to use | `number` | `2` | no |
+| <a name="input_project"></a> [project](#input\_project) | Project name | `string` | `"vpc-hub-spoke"` | no |
+| <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | CIDR block for the Hub VPC | `string` | `"10.0.0.0/16"` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| <a name="output_availability_zones"></a> [availability\_zones](#output\_availability\_zones) | List of Availability Zones used |
+| <a name="output_internet_gateway_id"></a> [internet\_gateway\_id](#output\_internet\_gateway\_id) | ID of the Internet Gateway |
+| <a name="output_nat_gateway_ids"></a> [nat\_gateway\_ids](#output\_nat\_gateway\_ids) | IDs of the NAT Gateways |
+| <a name="output_nat_gateway_public_ips"></a> [nat\_gateway\_public\_ips](#output\_nat\_gateway\_public\_ips) | Public IPs of the NAT Gateways |
+| <a name="output_private_route_table_ids"></a> [private\_route\_table\_ids](#output\_private\_route\_table\_ids) | IDs of the private route tables |
+| <a name="output_private_subnet_cidrs"></a> [private\_subnet\_cidrs](#output\_private\_subnet\_cidrs) | CIDR blocks of the private subnets |
+| <a name="output_private_subnet_ids"></a> [private\_subnet\_ids](#output\_private\_subnet\_ids) | IDs of the private subnets in the Hub VPC |
+| <a name="output_public_route_table_id"></a> [public\_route\_table\_id](#output\_public\_route\_table\_id) | ID of the public route table |
+| <a name="output_public_subnet_cidrs"></a> [public\_subnet\_cidrs](#output\_public\_subnet\_cidrs) | CIDR blocks of the public subnets |
+| <a name="output_public_subnet_ids"></a> [public\_subnet\_ids](#output\_public\_subnet\_ids) | IDs of the public subnets in the Hub VPC |
+| <a name="output_transit_gateway_arn"></a> [transit\_gateway\_arn](#output\_transit\_gateway\_arn) | ARN of the Transit Gateway |
+| <a name="output_transit_gateway_attachment_id"></a> [transit\_gateway\_attachment\_id](#output\_transit\_gateway\_attachment\_id) | ID of the Transit Gateway VPC attachment for the Hub |
+| <a name="output_transit_gateway_id"></a> [transit\_gateway\_id](#output\_transit\_gateway\_id) | ID of the Transit Gateway |
+| <a name="output_transit_gateway_route_table_id"></a> [transit\_gateway\_route\_table\_id](#output\_transit\_gateway\_route\_table\_id) | ID of the default Transit Gateway route table |
+| <a name="output_vpc_arn"></a> [vpc\_arn](#output\_vpc\_arn) | ARN of the Hub VPC |
+| <a name="output_vpc_cidr"></a> [vpc\_cidr](#output\_vpc\_cidr) | CIDR block of the Hub VPC |
+| <a name="output_vpc_id"></a> [vpc\_id](#output\_vpc\_id) | ID of the Hub VPC |
+<!-- END_TF_DOCS -->
