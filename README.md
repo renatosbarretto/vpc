@@ -1,182 +1,276 @@
-# 🌐 VPC Hub - AWS Terraform
+# AWS Hub and Spoke Architecture with Terraform
 
-Projeto simples para estudos de VPC Hub na AWS usando Terraform.
+Este projeto implementa uma arquitetura de rede Hub and Spoke na AWS usando Terraform, com Transit Gateway para conectividade entre VPCs.
 
-## 📋 Arquitetura
+## 🏗️ Arquitetura
 
 ```
                     ┌─────────────────┐
-                    │   INTERNET      │
+                    │   Internet      │
                     └─────────┬───────┘
                               │
                     ┌─────────▼───────┐
-                    │   VPC HUB       │
-                    │ 10.0.0.0/16     │
+                    │  Internet       │
+                    │  Gateway        │
+                    └─────────┬───────┘
+                              │
+                    ┌─────────▼───────┐
+                    │   Hub VPC       │
+                    │  (10.0.0.0/16)  │
                     │                 │
                     │ ┌─────────────┐ │
-                    │ │Public Subnet│ │ ← us-east-1a
-                    │ │10.0.1.0/24  │ │
-                    │ └─────────────┘ │
-                    │ ┌─────────────┐ │
-                    │ │Public Subnet│ │ ← us-east-1b
-                    │ │10.0.2.0/24  │ │
-                    │ └─────────────┘ │
-                    │ ┌─────────────┐ │
-                    │ │Public Subnet│ │ ← us-east-1c
-                    │ │10.0.3.0/24  │ │
-                    │ └─────────────┘ │
-                    │ ┌─────────────┐ │
-                    │ │Public Subnet│ │ ← us-east-1d
-                    │ │10.0.4.0/24  │ │
+                    │ │ Public      │ │
+                    │ │ Subnets     │ │
                     │ └─────────────┘ │
                     │                 │
                     │ ┌─────────────┐ │
-                    │ │Private Subnet│ │ ← us-east-1a
-                    │ │10.0.10.0/24 │ │
+                    │ │ Private     │ │
+                    │ │ Subnets     │ │
+                    │ │ + NAT GW    │ │
                     │ └─────────────┘ │
-                    │ ┌─────────────┐ │
-                    │ │Private Subnet│ │ ← us-east-1b
-                    │ │10.0.11.0/24 │ │
-                    │ └─────────────┘ │
-                    │ ┌─────────────┐ │
-                    │ │Private Subnet│ │ ← us-east-1c
-                    │ │10.0.12.0/24 │ │
-                    │ └─────────────┘ │
-                    │ ┌─────────────┐ │
-                    │ │Private Subnet│ │ ← us-east-1d
-                    │ │10.0.13.0/24 │ │
-                    │ └─────────────┘ │
-                    │                 │
-                    │ ┌─────────────┐ │
-                    │ │Transit Gateway│ │
-                    │ └─────────────┘ │
-                    └─────────────────┘
+                    └─────────┬───────┘
+                              │
+                    ┌─────────▼───────┐
+                    │  Transit        │
+                    │  Gateway        │
+                    └─────────┬───────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+┌───────▼──────┐    ┌─────────▼────────┐    ┌──────▼──────┐
+│  Dev Spoke   │    │ Staging Spoke    │    │ Prod Spoke  │
+│(10.1.0.0/16) │    │ (10.2.0.0/16)   │    │(10.3.0.0/16)│
+│              │    │                  │    │              │
+│ ┌──────────┐ │    │ ┌──────────────┐ │    │ ┌──────────┐ │
+│ │ Private  │ │    │ │ Private      │ │    │ │ Private  │ │
+│ │ Subnets  │ │    │ │ Subnets      │ │    │ │ Subnets  │ │
+│ └──────────┘ │    │ └──────────────┘ │    │ └──────────┘ │
+└──────────────┘    └──────────────────┘    └──────────────┘
 ```
 
-## 🏗️ Componentes
+## ✨ Funcionalidades
 
-### VPC Hub (Central)
-- **CIDR**: `10.0.0.0/16`
-- **Subnets Públicas**: `10.0.1.0/24`, `10.0.2.0/24`, `10.0.3.0/24`, `10.0.4.0/24`
-- **Subnets Privadas**: `10.0.10.0/24`, `10.0.11.0/24`, `10.0.12.0/24`, `10.0.13.0/24`
-- **Availability Zones**: 4 AZs (us-east-1a, us-east-1b, us-east-1c, us-east-1d)
-- **Internet Gateway**: Para acesso à internet
-- **NAT Gateway**: 4 NAT Gateways (um por AZ)
-- **Transit Gateway**: Para futuras conexões com VPCs Spoke
+### 🚀 Resolução de Problemas Críticos
+- **Ordem de criação correta**: Dependências explícitas resolvem o erro `InvalidTransitGatewayID.NotFound`
+- **Subnets dinâmicas**: Geração automática usando `cidrsubnet()` para evitar conflitos
+- **DNS Support**: Transit Gateway habilitado para resolução de domínios internos da AWS
 
-## 🚀 Como Usar
+### 🔧 Arquitetura Modular
+- **Módulo Hub**: VPC central com Transit Gateway, NAT Gateways e conectividade externa
+- **Módulo Spoke**: VPCs periféricas conectadas ao Hub via Transit Gateway
+- **Reutilização**: Módulos parametrizados para diferentes ambientes
 
-### Pré-requisitos
-- Terraform >= 1.0
-- AWS CLI configurado
-- Credenciais AWS válidas
+### 🌐 Conectividade Completa
+- **Hub → Spokes**: Rotas automáticas para todos os spokes
+- **Spokes → Internet**: Tráfego externo via Hub e NAT Gateways
+- **Spokes → Hub**: Comunicação bidirecional entre VPCs
+- **DNS interno**: Resolução de serviços AWS via Transit Gateway
 
-### Deploy
-```bash
-# Dar permissão de execução
-chmod +x scripts_vpc/deploy.sh
-
-# Executar deploy
-./scripts_vpc/deploy.sh
-```
-
-O script irá:
-1. ✅ Verificar dependências
-2. 🚀 Deployar VPC Hub
-
-### Deploy Manual
-```bash
-cd vpc/hub
-terraform init
-terraform plan
-terraform apply
-```
+### 🏷️ Tags e Boas Práticas
+- **Tags consistentes**: Name, Project, Environment, ManagedBy
+- **Tags adicionais**: Owner, CostCenter, Application
+- **Validações**: Verificação de parâmetros obrigatórios
 
 ## 📁 Estrutura do Projeto
 
 ```
-Blueprint_EKS/
-├── scripts_vpc/           # Scripts de automação
-│   ├── deploy.sh          # Script de deploy
-│   ├── destroy.sh         # Script de destroy
-│   ├── cleanup_default_vpc.sh  # Script de cleanup VPC default
-│   └── remove_vpc.sh      # Remove VPC específica
-├── README.md              # Este arquivo
-└── vpc/
-    └── hub/               # VPC Hub (central)
-        ├── main.tf
-        └── outputs.tf
+├── main.tf                    # Configuração principal
+├── variables.tf               # Variáveis do projeto
+├── outputs.tf                 # Outputs do projeto
+├── backend.tf                 # Configuração do backend S3
+├── modules/
+│   ├── hub/
+│   │   ├── main.tf           # Módulo Hub
+│   │   ├── variables.tf      # Variáveis do Hub
+│   │   ├── outputs.tf        # Outputs do Hub
+│   │   └── README.md         # Documentação do Hub
+│   └── spoke/
+│       ├── main.tf           # Módulo Spoke
+│       ├── variables.tf      # Variáveis do Spoke
+│       ├── outputs.tf        # Outputs do Spoke
+│       └── README.md         # Documentação do Spoke
+├── examples/
+│   └── multi-spoke.tf        # Exemplo com múltiplos spokes
+└── README.md                 # Este arquivo
 ```
 
-## 🔧 Scripts Disponíveis
+## 🚀 Uso Rápido
 
-### 🚀 `deploy.sh`
-- Deploya a VPC Hub com todas as configurações.
-- Pede confirmação antes de aplicar.
+### 1. Configuração Inicial
 
-### 🗑️ `destroy.sh`
-- Remove toda a infraestrutura da VPC Hub.
-- Pede confirmação antes de destruir.
-
-### 🧹 `cleanup_default_vpc.sh`
-- **Remove a VPC default** da conta AWS.
-- Identifica e remove recursos associados (EC2, RDS, ELB, etc.).
-- **⚠️ ATENÇÃO**: Use com cuidado, remove recursos permanentemente.
-
-### 🗑️ `remove_vpc.sh`
-- **Remove uma VPC específica** (não-default) da conta.
-- Mostra um **menu interativo** para escolher a VPC.
-- Verifica e remove recursos associados antes de deletar a VPC.
-
-## 🔧 Características
-
-- ✅ **Simples**: Fácil de entender e modificar
-- ✅ **Completa**: Subnets públicas e privadas em 4 AZs
-- ✅ **Alta Disponibilidade**: Distribuído em múltiplas AZs
-- ✅ **Preparada**: Transit Gateway para futuras expansões
-- ✅ **Segura**: NAT Gateway para subnets privadas
-- ✅ **Organizada**: Scripts separados em pasta própria
-- ✅ **Limpa**: Scripts para remover VPCs indesejadas
-
-## 🎯 Próximos Passos
-
-1. **VPCs Spoke**: Adicionar VPCs Dev, Staging, Prod
-2. **EKS Clusters**: Adicionar clusters Kubernetes
-3. **GitHub Actions**: Automatizar deploy via CI/CD
-4. **Monitoring**: CloudWatch e logs
-5. **Security**: Security Groups e NACLs
-
-## 💡 Conceitos Aprendidos
-
-- **VPC**: Virtual Private Cloud
-- **Subnets**: Divisão da rede VPC
-- **Availability Zones**: Redundância geográfica
-- **Internet Gateway**: Acesso à internet
-- **NAT Gateway**: Internet para subnets privadas
-- **Transit Gateway**: Conectividade entre VPCs
-- **Route Tables**: Controle de roteamento
-- **Terraform**: Infraestrutura como código
-
-## 🧹 Cleanup
-
-### Remover VPC Hub
 ```bash
-# Usando script
-./scripts_vpc/destroy.sh
+# Inicializar o Terraform
+terraform init
+
+# Verificar o plano
+terraform plan
+
+# Aplicar a configuração
+terraform apply
 ```
 
-### Limpar VPC Default (Opcional)
+### 2. Configuração Básica
+
+```hcl
+# main.tf
+module "hub" {
+  source = "./modules/hub"
+
+  vpc_cidr      = "10.0.0.0/16"
+  environment   = "dev"
+  project       = "my-project"
+  number_of_azs = 2
+}
+
+module "dev_spoke" {
+  source = "./modules/spoke"
+
+  vpc_cidr      = "10.1.0.0/16"
+  environment   = "dev"
+  spoke_name    = "dev"
+  transit_gateway_id = module.hub.transit_gateway_id
+}
+```
+
+### 3. Múltiplos Spokes
+
+```hcl
+locals {
+  spokes = {
+    dev = { vpc_cidr = "10.1.0.0/16", name = "dev" }
+    staging = { vpc_cidr = "10.2.0.0/16", name = "staging" }
+    prod = { vpc_cidr = "10.3.0.0/16", name = "prod" }
+  }
+}
+
+module "spokes" {
+  source = "./modules/spoke"
+  
+  for_each = local.spokes
+
+  vpc_cidr = each.value.vpc_cidr
+  environment = "prod"
+  spoke_name = each.value.name
+  transit_gateway_id = module.hub.transit_gateway_id
+}
+```
+
+## 📋 Pré-requisitos
+
+- **Terraform**: >= 1.0
+- **AWS Provider**: ~> 5.0
+- **AWS CLI**: Configurado com credenciais válidas
+- **Backend S3**: Bucket e tabela DynamoDB para estado remoto
+
+## 🔧 Configuração do Backend
+
+```hcl
+# backend.tf
+terraform {
+  backend "s3" {
+    bucket         = "terraform-state-684120556098"
+    key            = "network/terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "terraform-state-lock"
+  }
+}
+```
+
+## 📊 Outputs Principais
+
 ```bash
-# Remove VPC default e recursos associados
-./scripts_vpc/cleanup_default_vpc.sh
+# Informações do Hub
+hub_vpc_id = "vpc-xxxxxxxxx"
+transit_gateway_id = "tgw-xxxxxxxxx"
+hub_public_subnet_ids = ["subnet-xxxxxxxxx", "subnet-yyyyyyyyy"]
+
+# Informações dos Spokes
+spokes = {
+  dev = {
+    vpc_id = "vpc-xxxxxxxxx"
+    vpc_cidr = "10.1.0.0/16"
+    private_subnet_ids = ["subnet-xxxxxxxxx", "subnet-yyyyyyyyy"]
+  }
+}
+
+# Resumo da arquitetura
+network_summary = {
+  hub = {
+    vpc_cidr = "10.0.0.0/16"
+    public_subnets = 2
+    private_subnets = 2
+    nat_gateways = 2
+  }
+  spokes = {
+    count = 1
+    names = ["dev"]
+  }
+  transit_gateway = {
+    id = "tgw-xxxxxxxxx"
+    attachments = 2
+  }
+}
 ```
 
-### Remover uma VPC Específica
+## 🔍 Troubleshooting
+
+### Erro: InvalidTransitGatewayID.NotFound
+**Causa**: Ordem incorreta de criação dos recursos
+**Solução**: ✅ **RESOLVIDO** - Dependências explícitas nos módulos
+
+### Erro: AddressLimitExceeded
+**Causa**: Muitas subnets criadas simultaneamente
+**Solução**: ✅ **RESOLVIDO** - Subnets dinâmicas com `cidrsubnet()`
+
+### Erro: Duplicate CIDR blocks
+**Causa**: CIDRs conflitantes entre VPCs
+**Solução**: ✅ **RESOLVIDO** - Validação e geração automática
+
+## 🧪 Testes
+
+### Conectividade Hub → Spoke
 ```bash
-# Abre menu para selecionar e remover uma VPC
-./scripts_vpc/remove_vpc.sh
+# Testar conectividade do Hub para o Spoke
+ping 10.1.1.10  # IP de uma instância no Spoke
 ```
 
----
+### Conectividade Spoke → Internet
+```bash
+# Testar saída de internet do Spoke
+curl ifconfig.me  # Deve retornar IP do NAT Gateway do Hub
+```
 
-**Nota**: Este é um projeto para estudos. Em produção, considere adicionar mais segurança, monitoring e backup. 
+### DNS Resolution
+```bash
+# Testar resolução de domínios internos da AWS
+nslookup rds.amazonaws.com  # Deve resolver via Transit Gateway
+```
+
+## 📈 Próximos Passos
+
+- [ ] Adicionar Security Groups
+- [ ] Implementar VPC Endpoints
+- [ ] Configurar CloudWatch Logs
+- [ ] Adicionar monitoramento de conectividade
+- [ ] Implementar backup de configurações
+- [ ] Criar scripts de validação
+
+## 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+
+## 📞 Suporte
+
+Para dúvidas ou problemas:
+- Abra uma issue no GitHub
+- Consulte a documentação dos módulos
+- Verifique os exemplos na pasta `examples/` 
