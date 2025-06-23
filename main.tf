@@ -73,10 +73,16 @@ resource "aws_route" "hub_public_to_spokes" {
 
 # Rota das route tables privadas do Hub para os spokes via TGW
 resource "aws_route" "hub_private_to_spokes" {
-  for_each = local.spokes
+  for_each = {
+    for pair in setproduct(module.hub.private_route_table_ids, local.spokes) :
+    "${pair[0]}-${pair[1].name}" => {
+      route_table_id = pair[0]
+      spoke_cidr     = pair[1].vpc_cidr
+    }
+  }
 
-  route_table_id         = module.hub.private_route_table_ids[0]
-  destination_cidr_block = each.value.vpc_cidr
+  route_table_id         = each.value.route_table_id
+  destination_cidr_block = each.value.spoke_cidr
   transit_gateway_id     = module.hub.transit_gateway_id
 
   depends_on = [module.hub.transit_gateway_attachment_id]
@@ -106,4 +112,25 @@ resource "aws_route" "spokes_to_hub" {
   transit_gateway_id     = module.hub.transit_gateway_id
 
   depends_on = [module.hub.transit_gateway_attachment_id]
+}
+
+# =============================================================================
+# MODULE: FLOW LOGS
+# =============================================================================
+
+module "hub_flow_logs" {
+  source = "./modules/vpc-flow-logs"
+
+  vpc_id         = module.hub.vpc_id
+  log_group_name = "/aws/vpc-flow-logs/${local.project}-hub"
+  common_tags    = local.common_tags
+}
+
+module "spokes_flow_logs" {
+  source   = "./modules/vpc-flow-logs"
+  for_each = local.spokes
+
+  vpc_id         = module.spokes[each.key].vpc_id
+  log_group_name = "/aws/vpc-flow-logs/${local.project}-${each.key}"
+  common_tags    = local.common_tags
 } 

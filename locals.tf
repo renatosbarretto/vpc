@@ -11,6 +11,9 @@ locals {
     Environment = local.environment
     Project     = local.project
     ManagedBy   = "terraform"
+    CostCenter  = "Infrastructure"
+    Owner       = "DevOps Team"
+    Application = "Network Infrastructure"
   })
 
   # Configuração dos spokes

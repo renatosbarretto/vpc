@@ -1,276 +1,104 @@
-# AWS Hub and Spoke Architecture with Terraform
+# 🚀 Terraform Hub and Spoke Architecture on AWS
 
-Este projeto implementa uma arquitetura de rede Hub and Spoke na AWS usando Terraform, com Transit Gateway para conectividade entre VPCs.
+This project deploys a scalable and secure Hub and Spoke network architecture on AWS using Terraform. It leverages AWS Transit Gateway to interconnect multiple VPCs (spokes) through a central VPC (hub), providing centralized connectivity, security, and management.
 
-## 🏗️ Arquitetura
+![Architecture Diagram](https://user-images.githubusercontent.com/10996348/123456789-abcdef.png) 
+*(Note: Replace with a real architecture diagram URL)*
 
-```
-                    ┌─────────────────┐
-                    │   Internet      │
-                    └─────────┬───────┘
-                              │
-                    ┌─────────▼───────┐
-                    │  Internet       │
-                    │  Gateway        │
-                    └─────────┬───────┘
-                              │
-                    ┌─────────▼───────┐
-                    │   Hub VPC       │
-                    │  (10.0.0.0/16)  │
-                    │                 │
-                    │ ┌─────────────┐ │
-                    │ │ Public      │ │
-                    │ │ Subnets     │ │
-                    │ └─────────────┘ │
-                    │                 │
-                    │ ┌─────────────┐ │
-                    │ │ Private     │ │
-                    │ │ Subnets     │ │
-                    │ │ + NAT GW    │ │
-                    │ └─────────────┘ │
-                    └─────────┬───────┘
-                              │
-                    ┌─────────▼───────┐
-                    │  Transit        │
-                    │  Gateway        │
-                    └─────────┬───────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        │                     │                     │
-┌───────▼──────┐    ┌─────────▼────────┐    ┌──────▼──────┐
-│  Dev Spoke   │    │ Staging Spoke    │    │ Prod Spoke  │
-│(10.1.0.0/16) │    │ (10.2.0.0/16)   │    │(10.3.0.0/16)│
-│              │    │                  │    │              │
-│ ┌──────────┐ │    │ ┌──────────────┐ │    │ ┌──────────┐ │
-│ │ Private  │ │    │ │ Private      │ │    │ │ Private  │ │
-│ │ Subnets  │ │    │ │ Subnets      │ │    │ │ Subnets  │ │
-│ └──────────┘ │    │ └──────────────┘ │    │ └──────────┘ │
-└──────────────┘    └──────────────────┘    └──────────────┘
-```
+---
 
-## ✨ Funcionalidades
+## 🎯 Architecture Overview
 
-### 🚀 Resolução de Problemas Críticos
-- **Ordem de criação correta**: Dependências explícitas resolvem o erro `InvalidTransitGatewayID.NotFound`
-- **Subnets dinâmicas**: Geração automática usando `cidrsubnet()` para evitar conflitos
-- **DNS Support**: Transit Gateway habilitado para resolução de domínios internos da AWS
+The architecture consists of:
 
-### 🔧 Arquitetura Modular
-- **Módulo Hub**: VPC central com Transit Gateway, NAT Gateways e conectividade externa
-- **Módulo Spoke**: VPCs periféricas conectadas ao Hub via Transit Gateway
-- **Reutilização**: Módulos parametrizados para diferentes ambientes
+-   **Hub VPC**: A central VPC that provides shared services and connectivity.
+    -   Contains public subnets for external access (e.g., via Bastion Hosts).
+    -   Contains private subnets for shared services like NAT Gateways, security appliances, and monitoring tools.
+    -   Hosts an **Internet Gateway** for outbound and inbound internet traffic.
+    -   Uses **NAT Gateways** to allow resources in private subnets to access the internet without being publicly exposed.
 
-### 🌐 Conectividade Completa
-- **Hub → Spokes**: Rotas automáticas para todos os spokes
-- **Spokes → Internet**: Tráfego externo via Hub e NAT Gateways
-- **Spokes → Hub**: Comunicação bidirecional entre VPCs
-- **DNS interno**: Resolução de serviços AWS via Transit Gateway
+-   **Spoke VPCs**: Isolated VPCs for different environments (e.g., dev, staging, prod) or applications.
+    -   Typically contain only private subnets to enhance security.
+    -   All traffic to the internet, to other spokes, or to on-premises networks is routed through the Hub VPC via the Transit Gateway.
 
-### 🏷️ Tags e Boas Práticas
-- **Tags consistentes**: Name, Project, Environment, ManagedBy
-- **Tags adicionais**: Owner, CostCenter, Application
-- **Validações**: Verificação de parâmetros obrigatórios
+-   **AWS Transit Gateway (TGW)**: Acts as a cloud router, simplifying network topology.
+    -   All VPCs are attached to the TGW.
+    -   A dedicated TGW Route Table controls traffic flow between the hub, spokes, and other connected networks.
 
-## 📁 Estrutura do Projeto
+---
 
-```
-├── main.tf                    # Configuração principal
-├── variables.tf               # Variáveis do projeto
-├── outputs.tf                 # Outputs do projeto
-├── backend.tf                 # Configuração do backend S3
-├── modules/
-│   ├── hub/
-│   │   ├── main.tf           # Módulo Hub
-│   │   ├── variables.tf      # Variáveis do Hub
-│   │   ├── outputs.tf        # Outputs do Hub
-│   │   └── README.md         # Documentação do Hub
-│   └── spoke/
-│       ├── main.tf           # Módulo Spoke
-│       ├── variables.tf      # Variáveis do Spoke
-│       ├── outputs.tf        # Outputs do Spoke
-│       └── README.md         # Documentação do Spoke
-├── examples/
-│   └── multi-spoke.tf        # Exemplo com múltiplos spokes
-└── README.md                 # Este arquivo
-```
+## ✅ Features
 
-## 🚀 Uso Rápido
+-   **Modular Design**: Fully modularized code (`hub`, `spoke`, `ec2-instance`, `vpc-flow-logs`).
+-   **Centralized Egress**: All spoke traffic to the internet is routed through NAT Gateways in the Hub.
+-   **Isolated Environments**: Spokes are isolated from each other by default; inter-spoke routing can be enabled in the TGW.
+-   **Remote State Management**: Securely manages Terraform state using an S3 bucket and DynamoDB for locking.
+-   **Automated Documentation**: Module documentation is automatically generated using `terraform-docs`.
+-   **Observability**: VPC Flow Logs are enabled for all VPCs and sent to CloudWatch Logs.
+-   **Governance**: Consistent tagging across all resources for cost management and ownership tracking.
 
-### 1. Configuração Inicial
+---
+
+## 🛠️ How to Run This Project
+
+### Prerequisites
+
+-   [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli) v1.0+
+-   An AWS account with appropriate permissions.
+-   AWS CLI configured with credentials.
+
+### 1. Configure the Backend
+
+The backend infrastructure (S3 bucket and DynamoDB table) is managed in the `/backend` directory.
+
+> **Note**: This step only needs to be done once.
 
 ```bash
-# Inicializar o Terraform
+# Navigate to the backend directory
+cd backend
+
+# Initialize Terraform
 terraform init
 
-# Verificar o plano
-terraform plan
-
-# Aplicar a configuração
+# Apply the configuration to create the S3 bucket and DynamoDB table
 terraform apply
 ```
 
-### 2. Configuração Básica
+### 2. Configure the Main Infrastructure
 
-```hcl
-# main.tf
-module "hub" {
-  source = "./modules/hub"
+All configuration for the network is in the root directory.
 
-  vpc_cidr      = "10.0.0.0/16"
-  environment   = "dev"
-  project       = "my-project"
-  number_of_azs = 2
-}
+-   **Customize `locals.tf`**:
+    -   Update the `spokes` map to define your VPC spokes.
+    -   Update tag values like `CostCenter`, `Owner`, etc.
+-   **Customize `variables.tf`**:
+    -   Review default values and add any new variables as needed.
 
-module "dev_spoke" {
-  source = "./modules/spoke"
-
-  vpc_cidr      = "10.1.0.0/16"
-  environment   = "dev"
-  spoke_name    = "dev"
-  transit_gateway_id = module.hub.transit_gateway_id
-}
-```
-
-### 3. Múltiplos Spokes
-
-```hcl
-locals {
-  spokes = {
-    dev = { vpc_cidr = "10.1.0.0/16", name = "dev" }
-    staging = { vpc_cidr = "10.2.0.0/16", name = "staging" }
-    prod = { vpc_cidr = "10.3.0.0/16", name = "prod" }
-  }
-}
-
-module "spokes" {
-  source = "./modules/spoke"
-  
-  for_each = local.spokes
-
-  vpc_cidr = each.value.vpc_cidr
-  environment = "prod"
-  spoke_name = each.value.name
-  transit_gateway_id = module.hub.transit_gateway_id
-}
-```
-
-## 📋 Pré-requisitos
-
-- **Terraform**: >= 1.0
-- **AWS Provider**: ~> 5.0
-- **AWS CLI**: Configurado com credenciais válidas
-- **Backend S3**: Bucket e tabela DynamoDB para estado remoto
-
-## 🔧 Configuração do Backend
-
-```hcl
-# backend.tf
-terraform {
-  backend "s3" {
-    bucket         = "terraform-state-684120556098"
-    key            = "network/terraform.tfstate"
-    region         = "us-east-1"
-    encrypt        = true
-    dynamodb_table = "terraform-state-lock"
-  }
-}
-```
-
-## 📊 Outputs Principais
+### 3. Deploy
 
 ```bash
-# Informações do Hub
-hub_vpc_id = "vpc-xxxxxxxxx"
-transit_gateway_id = "tgw-xxxxxxxxx"
-hub_public_subnet_ids = ["subnet-xxxxxxxxx", "subnet-yyyyyyyyy"]
+# Initialize Terraform in the root directory
+# This will configure the S3 backend.
+terraform init
 
-# Informações dos Spokes
-spokes = {
-  dev = {
-    vpc_id = "vpc-xxxxxxxxx"
-    vpc_cidr = "10.1.0.0/16"
-    private_subnet_ids = ["subnet-xxxxxxxxx", "subnet-yyyyyyyyy"]
-  }
-}
+# Review the execution plan
+terraform plan
 
-# Resumo da arquitetura
-network_summary = {
-  hub = {
-    vpc_cidr = "10.0.0.0/16"
-    public_subnets = 2
-    private_subnets = 2
-    nat_gateways = 2
-  }
-  spokes = {
-    count = 1
-    names = ["dev"]
-  }
-  transit_gateway = {
-    id = "tgw-xxxxxxxxx"
-    attachments = 2
-  }
-}
+# Apply the configuration
+terraform apply
 ```
 
-## 🔍 Troubleshooting
+### 4. Destroy
 
-### Erro: InvalidTransitGatewayID.NotFound
-**Causa**: Ordem incorreta de criação dos recursos
-**Solução**: ✅ **RESOLVIDO** - Dependências explícitas nos módulos
+To avoid ongoing costs, you can destroy the infrastructure.
 
-### Erro: AddressLimitExceeded
-**Causa**: Muitas subnets criadas simultaneamente
-**Solução**: ✅ **RESOLVIDO** - Subnets dinâmicas com `cidrsubnet()`
-
-### Erro: Duplicate CIDR blocks
-**Causa**: CIDRs conflitantes entre VPCs
-**Solução**: ✅ **RESOLVIDO** - Validação e geração automática
-
-## 🧪 Testes
-
-### Conectividade Hub → Spoke
 ```bash
-# Testar conectividade do Hub para o Spoke
-ping 10.1.1.10  # IP de uma instância no Spoke
+# Destroy the network infrastructure
+terraform destroy
+
+# (Optional) Destroy the backend infrastructure
+cd backend
+terraform destroy
 ```
 
-### Conectividade Spoke → Internet
-```bash
-# Testar saída de internet do Spoke
-curl ifconfig.me  # Deve retornar IP do NAT Gateway do Hub
-```
-
-### DNS Resolution
-```bash
-# Testar resolução de domínios internos da AWS
-nslookup rds.amazonaws.com  # Deve resolver via Transit Gateway
-```
-
-## 📈 Próximos Passos
-
-- [ ] Adicionar Security Groups
-- [ ] Implementar VPC Endpoints
-- [ ] Configurar CloudWatch Logs
-- [ ] Adicionar monitoramento de conectividade
-- [ ] Implementar backup de configurações
-- [ ] Criar scripts de validação
-
-## 🤝 Contribuição
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
-
-## 📞 Suporte
-
-Para dúvidas ou problemas:
-- Abra uma issue no GitHub
-- Consulte a documentação dos módulos
-- Verifique os exemplos na pasta `examples/` 
+</rewritten_file>
