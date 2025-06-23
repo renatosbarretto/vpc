@@ -33,6 +33,7 @@ module "spokes" {
   project                              = local.project
   number_of_azs                        = var.number_of_azs
   transit_gateway_id                   = module.hub.transit_gateway_id
+  transit_gateway_route_table_id       = module.hub.transit_gateway_route_table_id
   transit_gateway_attachment_dependencies = [module.hub.transit_gateway_attachment_id]
   common_tags                          = local.common_tags
   additional_tags                      = var.additional_tags

@@ -42,6 +42,11 @@ variable "transit_gateway_id" {
   type        = string
 }
 
+variable "transit_gateway_route_table_id" {
+  description = "ID of the TGW route table to associate/propagate with"
+  type        = string
+}
+
 variable "transit_gateway_attachment_dependencies" {
   description = "Dependencies for Transit Gateway attachment (used for depends_on)"
   type        = any

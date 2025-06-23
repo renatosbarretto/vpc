@@ -68,8 +68,8 @@ output "transit_gateway_attachment_id" {
 }
 
 output "transit_gateway_route_table_id" {
-  description = "ID of the default Transit Gateway route table"
-  value       = aws_ec2_transit_gateway.hub.association_default_route_table_id
+  description = "ID of the dedicated Transit Gateway route table"
+  value       = aws_ec2_transit_gateway_route_table.hub_spoke.id
 }
 
 output "public_route_table_id" {

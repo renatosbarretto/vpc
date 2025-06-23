@@ -122,11 +122,19 @@ resource "aws_nat_gateway" "hub" {
 resource "aws_ec2_transit_gateway" "hub" {
   description = "Transit Gateway for Hub and Spoke architecture"
 
-  default_route_table_association = "enable"
-  default_route_table_propagation = "enable"
+  default_route_table_association = "disable"
+  default_route_table_propagation = "disable"
 
   tags = merge(var.common_tags, {
     Name = "hub-transit-gateway"
+  })
+}
+
+resource "aws_ec2_transit_gateway_route_table" "hub_spoke" {
+  transit_gateway_id = aws_ec2_transit_gateway.hub.id
+
+  tags = merge(var.common_tags, {
+    Name = "hub-spoke-tgw-rt"
   })
 }
 
@@ -195,6 +203,16 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "hub" {
   tags = merge(var.common_tags, {
     Name = "hub-tgw-attachment"
   })
+}
+
+resource "aws_ec2_transit_gateway_route_table_association" "hub" {
+  transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.hub.id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.hub_spoke.id
+}
+
+resource "aws_ec2_transit_gateway_route_table_propagation" "hub" {
+  transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.hub.id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.hub_spoke.id
 }
 
 # =============================================================================

@@ -69,6 +69,16 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "spoke" {
   depends_on = [var.transit_gateway_attachment_dependencies]
 }
 
+resource "aws_ec2_transit_gateway_route_table_association" "spoke" {
+  transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.spoke.id
+  transit_gateway_route_table_id = var.transit_gateway_route_table_id
+}
+
+resource "aws_ec2_transit_gateway_route_table_propagation" "spoke" {
+  transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.spoke.id
+  transit_gateway_route_table_id = var.transit_gateway_route_table_id
+}
+
 # =============================================================================
 # ROUTE TABLE
 # =============================================================================
