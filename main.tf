@@ -137,4 +137,4 @@ module "spokes_flow_logs" {
   vpc_id         = module.spokes[each.key].vpc_id
   log_group_name = "/aws/vpc-flow-logs/${local.project}-${each.key}"
   common_tags    = local.common_tags
-} 
+} # Trigger pipeline
